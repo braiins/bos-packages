@@ -1,0 +1,87 @@
+--- a/mmc.c
++++ b/mmc.c
+@@ -98,6 +98,11 @@ static struct Command commands[] = {
+ 		"Set the eMMC data sector size to 4KB by disabling emulation on\n<device>.",
+ 	  NULL
+ 	},
++	{ do_enh_attrs_set, -2,
++	  "enh_attrs set", "<value> " "<device>\n"
++		"Set the enhanced user attributes for the <device>.",
++	  NULL
++	},
+ 	{ do_create_gp_partition, -6,
+ 	  "gp create", "<-y|-n|-c> " "<length KiB> " "<partition> " "<enh_attr> " "<ext_attr> " "<device>\n"
+ 		"Create general purpose partition for the <device>.\nDry-run only unless -y or -c is passed.\nUse -c if more partitioning settings are still to come.\nNOTE!  This is a one-time programmable (unreversible) change.\nTo set enhanced attribute to general partition being created set\n <enh_attr> to 1 else set it to 0.\nTo set extended attribute to general partition\n set <ext_attr> to 1,2 else set it to 0",
+--- a/mmc_cmds.c
++++ b/mmc_cmds.c
+@@ -1042,6 +1042,60 @@ int check_enhanced_area_total_limit(cons
+ 	return 0;
+ }
+ 
++int do_enh_attrs_set(int nargs, char **argv)
++{
++	__u8 value;
++	__u8 ext_csd[512];
++	int fd, ret;
++	char *device;
++
++	if (strstr(argv[1], "0x") || strstr(argv[1], "0X"))
++		value = strtol(argv[1], NULL, 16);
++	else
++		value = strtol(argv[1], NULL, 10);
++	device = argv[2];
++
++	if (nargs != 3) {
++		fprintf(stderr, "Usage: mmc enh_attrs set <value> </path/to/mmcblkX>\n");
++		exit(1);
++	}
++
++	fd = open(device, O_RDWR);
++	if (fd < 0) {
++		perror("open");
++		exit(1);
++	}
++
++	ret = read_extcsd(fd, ext_csd);
++	if (ret) {
++		fprintf(stderr, "Could not read EXT_CSD from %s\n", device);
++		exit(1);
++	}
++
++	/* assert not PARTITION_SETTING_COMPLETED */
++	if (ext_csd[EXT_CSD_PARTITION_SETTING_COMPLETED]) {
++		printf(" Device is already partitioned\n");
++		exit(1);
++	}
++
++	/* set EXT_CSD_ERASE_GROUP_DEF bit 0 */
++	ret = write_extcsd_value(fd, EXT_CSD_ERASE_GROUP_DEF, 0x1);
++	if (ret) {
++		fprintf(stderr, "Could not write 0x1 to EXT_CSD[%d] in %s\n",
++			EXT_CSD_ERASE_GROUP_DEF, device);
++		exit(1);
++	}
++
++	ret = write_extcsd_value(fd, EXT_CSD_PARTITIONS_ATTRIBUTE, value);
++	if (ret) {
++		fprintf(stderr, "Could not write 0x%02x to EXT_CSD[%d] in %s\n",
++			value, EXT_CSD_PARTITIONS_ATTRIBUTE, device);
++		exit(1);
++	}
++
++	return 0;
++}
++
+ int do_create_gp_partition(int nargs, char **argv)
+ {
+ 	__u8 value;
+--- a/mmc_cmds.h
++++ b/mmc_cmds.h
+@@ -32,6 +32,7 @@ int do_hwreset_en(int nargs, char **argv
+ int do_hwreset_dis(int nargs, char **argv);
+ int do_sanitize(int nargs, char **argv);
+ int do_status_get(int nargs, char **argv);
++int do_enh_attrs_set(int nargs, char **argv);
+ int do_create_gp_partition(int nargs, char **argv);
+ int do_enh_area_set(int nargs, char **argv);
+ int do_write_reliability_set(int nargs, char **argv);
