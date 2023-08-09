@@ -1,0 +1,11 @@
+config EXTERNAL_BOSER_BIN_PATH
+    string "Set path to BOSer binary" if DEVEL
+    default ""
+
+config EXTERNAL_BOSER_WWW_PATH
+    string "Set www source for BOSer" if DEVEL
+    default ""
+
+config EXTERNAL_BOSER_WWW_VAR_PATH
+    string "Set var path for BOSer" if DEVEL
+    default ""
