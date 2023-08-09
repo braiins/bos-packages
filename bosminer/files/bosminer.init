@@ -1,0 +1,222 @@
+#!/bin/sh /etc/rc.common
+
+# Copyright (C) 2023 Braiins Systems s.r.o.
+#
+# This file is part of Braiins Open-Source Initiative (BOSI).
+#
+# BOSI is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Please, keep in mind that we may also license BOSI or any part thereof
+# under a proprietary license. For more information on the terms and conditions
+# of such proprietary license or if you have any other questions, please
+# contact us at opensource@braiins.com.
+
+START=99
+
+USE_PROCD=1
+PROG=/usr/bin/bosminer
+ARG1=--log-to-file
+CONF=/etc/bosminer.toml
+CONF_TMP=${CONF}_tmp
+
+. /lib/functions/bos-defaults.sh
+
+begins_with() {
+	case "$2" in
+		"$1"*) true;;
+		*) false;;
+	esac
+}
+
+has_substr() {
+	case "$2" in
+		*"$1"*) true;;
+		*) false;;
+	esac
+}
+
+generate_pools() {
+	local pool_count="$1"
+
+	[ $pool_count -gt 0 ] || return 0
+
+	for i in $(seq 1 $pool_count); do
+		local pool_host=$(get_env_config miner_pool_host_$i)
+		local pool_port=$(get_env_config miner_pool_port_$i)
+		local pool_user=$(get_env_config miner_pool_user_$i)
+		local pool_pass=$(get_env_config miner_pool_pass_$i)
+		local pool_url="${pool_host}${pool_port:+:$pool_port}"
+
+		# Detect stratum server
+		begins_with "stratum+tcp://" "$pool_url"
+		local stratum=$?
+
+		if [ $stratum -eq 0 ] || ! has_substr "://" "$pool_url"; then
+			if [ $stratum -eq 0 ]; then
+				cat >> "$CONF_TMP" <<-END
+
+					[[group.pool]]
+					url = '${pool_url}'
+				END
+			else
+				cat >> "$CONF_TMP" <<-END
+
+					[[group.pool]]
+					# url = '${pool_url}'
+					url = 'stratum+tcp://${pool_url}'
+				END
+			fi
+			cat >> "$CONF_TMP" <<-END
+				user = '${pool_user:-!non-existent-user!}'
+			END
+			[ -n "$pool_pass" ] && \
+			cat >> "$CONF_TMP" <<-END
+				password = '${pool_pass}'
+			END
+		else
+			cat >> "$CONF_TMP" <<-END
+
+				# Incompatible pool
+				# [[group.pool]]
+				# url = '${pool_url}'
+				# user = '${pool_user}'
+			END
+			[ -n "$pool_pass" ] && \
+			cat >> "$CONF_TMP" <<-END
+				# password = '${pool_pass}'
+			END
+		fi
+	done
+
+	return 0
+}
+
+boot()
+{
+	if [ ! -f "$CONF" ]; then
+		local pool_host=$(get_env_config miner_pool_host)
+		local pool_port=$(get_env_config miner_pool_port)
+		local pool_path=$(get_env_config miner_pool_path)
+		local pool_user=$(get_env_config miner_pool_user)
+		local pool_pass=$(get_env_config miner_pool_pass)
+		local pool_count=$(get_env_config miner_pool_count)
+		local miner_model=$(get_env_config miner_model)
+		local miner_freq=$(get_env_config miner_freq)
+		local miner_voltage=$(get_env_config miner_voltage)
+		local miner_fixed_freq=$(get_env_config miner_fixed_freq)
+		local miner_psu_power_limit=$(get_env_config miner_psu_power_limit)
+		local autotuning_enabled="yes"
+
+		case $miner_psu_power_limit in
+			default)
+				miner_psu_power_limit=
+			;;
+		esac
+
+		# use the public key of our pool that allows authentication of the default Stratum V2 host
+		[ -z "$pool_path" -a -z "$pool_host" ] && \
+		pool_path="u95GEReVMjK6k5YqiSFNqqTnKU4ypU2Wm8awa6tmbmDmk1bWt"
+
+		pool_host=${pool_host:-stratum2+tcp://v2.stratum.braiins.com}
+
+		pool_count=${pool_count:-0}
+		[ $pool_count -gt 0 ] || pool_user=${pool_user:-!non-existent-user!}
+
+		local minor
+		local plus=""
+		case $BOS_VERSION_SUFFIX in
+			*plus*)
+				plus="+"
+			;;
+		esac
+
+		local model=""
+		case $(bos_platform) in
+			stm32mp157c-ii1-am2)
+				[ -n "$miner_model" ] && \
+					model="$miner_model" || \
+					model="Antminer S19"
+				minor=0
+				;;
+		esac
+
+		cat > "$CONF_TMP" <<-END
+			[format]
+			version = '2.${minor}'
+			model = '${model}'
+			generator = 'init_script'
+			timestamp = $(date +%s)
+		END
+		# applies only to AM1
+		[ "$miner_fixed_freq" == "true" -a -n "$miner_freq" ] && \
+		cat >> "$CONF_TMP" <<-END
+
+			[hash_chain_global]
+			frequency = ${miner_freq}
+		END
+		cat >> "$CONF_TMP" <<-END
+
+			[[group]]
+			name = 'Default'
+		END
+		[ -n "$pool_user" ] && \
+		cat >> "$CONF_TMP" <<-END
+
+			[[group.pool]]
+			url = '${pool_host}${pool_port:+:$pool_port}${pool_path:+/$pool_path}'
+			user = '${pool_user}'
+
+			[[group.pool]]
+			url = 'stratum+tcp://stratum.slushpool.com:3333'
+			user = '${pool_user}'
+		END
+		[ -n "$pool_user" -a -n "$pool_pass" ] && \
+		cat >> "$CONF_TMP" <<-END
+			password = '${pool_pass}'
+		END
+		generate_pools $pool_count
+		[ -n "$plus" -a "$autotuning_enabled" == "yes" ] && \
+		cat >> "$CONF_TMP" <<-END
+
+			[autotuning]
+			enabled = true
+		END
+		[ -n "$plus" -a -n "$miner_psu_power_limit" ] && \
+		cat >> "$CONF_TMP" <<-END
+			mode = 'power_target'
+			power_target = ${miner_psu_power_limit}
+		END
+	fi
+	mv "$CONF_TMP" "$CONF"
+	fsync "$CONF"
+	start "$@"
+}
+
+start_service()
+{
+	procd_open_instance
+	procd_set_param command "$PROG" "$ARG1"
+	procd_set_param respawn 3600 5 0
+	procd_set_param stdout 0
+	procd_set_param stderr 1
+	procd_set_param pidfile /var/run/bosminer.pid
+	procd_set_param term_timeout 20
+	procd_close_instance
+}
+
+reload_service()
+{
+	stop
+	start
+}

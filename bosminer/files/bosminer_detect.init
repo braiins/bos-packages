@@ -1,0 +1,54 @@
+#!/bin/sh /etc/rc.common
+
+# Copyright (C) 2023 Braiins Systems s.r.o.
+#
+# This file is part of Braiins Open-Source Initiative (BOSI).
+#
+# BOSI is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Please, keep in mind that we may also license BOSI or any part thereof
+# under a proprietary license. For more information on the terms and conditions
+# of such proprietary license or if you have any other questions, please
+# contact us at opensource@braiins.com.
+
+# The detection must be done before BOSminer start to avoid collision on the bus!
+# The BOSminer is not designed to run in parallel with other instances.
+
+START=98
+
+USE_PROCD=1
+PROG=/usr/bin/bosminer
+
+boot()
+{
+	. /lib/functions/bos-defaults.sh
+
+	# Redirect STDOUT and STDERR to /dev/kmsg
+	exec 1<&- 2<&- 1>/dev/kmsg 2>&1
+
+	local model=""
+	case "$(bos_platform)" in
+		stm32mp157c-ii1-am2)
+			echo "Detecting miner model..."
+
+			# Create or remove '/etc/bosminer_model.json' with actual
+			# miner metadata
+			"$PROG" model --detect
+			;;
+		*)
+			# Other platforms does not support model detection
+			true
+			;;
+	esac
+}

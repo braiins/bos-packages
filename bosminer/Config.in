@@ -1,0 +1,3 @@
+config EXTERNAL_BOSMINER_BIN_PATH
+    string "Set path to BOSminer binary" if DEVEL
+    default ""
