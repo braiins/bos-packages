@@ -22,47 +22,47 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=bos_logger
+PKG_NAME:=bos-logger
 PKG_RELEASE:=1
 
 PKG_MAINTAINER:=Braiins <braiins@braiins.com>
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/bos_logger
+define Package/bos-logger
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=Utilities for logging Braiins OS
   DEPENDS:=+logrotate
 endef
 
-define Package/bos_logger/description
+define Package/bos-logger/description
  Setup and monitor system logs.
 endef
 
 define Build/Compile
 endef
 
-define Package/bos_logger/install
+define Package/bos-logger/install
 	$(INSTALL_DIR) $(1)/etc/init.d/
-	$(INSTALL_BIN) ./files/bos_logger.init $(1)/etc/init.d/bos_logger
+	$(INSTALL_BIN) ./files/bos-logger.init $(1)/etc/init.d/bos_logger
 
 	$(INSTALL_DIR) $(1)/etc/logrotate.d/
 	$(INSTALL_DATA) ./files/system.config $(1)/etc/logrotate.d/system
 endef
 
-define Package/bos_logger/preinst
+define Package/bos-logger/preinst
 #!/bin/sh
 
 echo "*/1 * * * * /usr/sbin/logrotate /etc/logrotate.conf 2>&1 | logger -t logrotate" \
 >> $${IPKG_INSTROOT}/etc/crontabs/root
 endef
 
-define Package/bos_logger/postrm
+define Package/bos-logger/postrm
 #!/bin/sh
 
 sed -i '/\/usr\/sbin\/logrotate/d' /etc/crontabs/root
 /etc/init.d/cron restart
 endef
 
-$(eval $(call BuildPackage,bos_logger))
+$(eval $(call BuildPackage,bos-logger))
