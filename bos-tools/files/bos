@@ -1,0 +1,80 @@
+#!/bin/sh
+
+# Copyright (C) 2023  Braiins Systems s.r.o.
+#
+# This file is part of Braiins Open-Source Initiative (BOSI).
+#
+# BOSI is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Please, keep in mind that we may also license BOSI or any part thereof
+# under a proprietary license. For more information on the terms and conditions
+# of such proprietary license or if you have any other questions, please
+# contact us at opensource@braiins.com.
+
+# Immediately exit when error occurs
+set -e
+
+usage() {
+	echo "usage: bos [-h] {factory_reset,ip_report} ..."
+	echo
+	echo "positional arguments:"
+	echo "  {factory_reset,ip_report}"
+	echo "    factory_reset       reboot and initiate factory reset"
+	echo "    ip_report           broadcast IP and MAC address of device"
+	echo
+	echo "optional arguments:"
+	echo "  -h, --help            show this help message and exit"
+}
+
+factory_reset() {
+	if [ $# -gt 0 ]; then
+		echo "command 'factory_reset' does not take any argument" >&2
+		exit 1
+	fi
+	# Erase U-Boot environment
+	# TODO: Find 'fip' image and offset of uEnv
+	# U-Boot load default environment which initiate factory reset
+	reboot
+}
+
+ip_report() {
+	if [ $# -gt 0 ]; then
+		echo "command 'ip_report' does not take any argument" >&2
+		exit 1
+	fi
+	/usr/bin/bos-tools ip-report
+}
+
+# Check number of arguments
+if [ $# -lt 1 ]; then
+	echo "missing command argument" >&2
+	exit 1
+fi
+
+# Try to find command
+command="$1"
+
+case $command in
+	factory_reset|ip_report)
+		shift
+		$command "$@"
+	;;
+	-h|--help)
+		usage
+	;;
+	*)  # Unknown command
+		echo "unknown command '$command'" >&2
+		exit 1
+	;;
+esac

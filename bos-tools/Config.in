@@ -1,0 +1,3 @@
+config EXTERNAL_BOS_TOOLS_BIN_PATH
+    string "Set path to BOS tools binary" if DEVEL
+    default ""
