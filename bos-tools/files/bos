@@ -42,9 +42,34 @@ factory_reset() {
 		echo "command 'factory_reset' does not take any argument" >&2
 		exit 1
 	fi
-	# Erase U-Boot environment
-	# TODO: Find 'fip' image and offset of uEnv
-	# U-Boot load default environment which initiate factory reset
+
+	. /lib/functions/bos-defaults.sh
+
+	case "$(bos_mode)" in
+	emmc)
+		local fip_dev fip_size env_size env_offset
+
+		fip_dev=$(find_part_fip_dev)
+		if [ -z "$fip_dev" ]; then
+			log_default_config "partition 'fip' cannot be found"
+			exit 1
+		fi
+
+		fip_size=$(lsblk -bno SIZE $fip_dev)
+		env_size=$((UBOOT_ENV_FULL_SIZE))
+		env_offset=$(( (fip_size - env_size) / env_size ))
+
+		# Erase U-Boot environment to force default one which do factory reset
+		dd if=/dev/zero of=$fip_dev seek=$env_offset bs=$env_size count=1 \
+			> /dev/null 2>&1
+		;;
+	*)
+		# Do generic factory reset which only wipes rootfs overlay
+		rm "/overlay/.fs_state"
+		;;
+	esac
+
+	sync
 	reboot
 }
 
