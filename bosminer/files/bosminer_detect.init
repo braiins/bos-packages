@@ -25,7 +25,7 @@
 # The detection must be done before BOSminer start to avoid collision on the bus!
 # The BOSminer is not designed to run in parallel with other instances.
 
-START=98
+START=97
 
 USE_PROCD=1
 PROG=/usr/bin/bosminer

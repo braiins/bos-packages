@@ -22,7 +22,7 @@
 # of such proprietary license or if you have any other questions, please
 # contact us at opensource@braiins.com.
 
-START=99
+START=98
 
 USE_PROCD=1
 PROG=/usr/bin/boser
