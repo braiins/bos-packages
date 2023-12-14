@@ -45,6 +45,17 @@ start_service()
 	procd_close_instance
 }
 
+service_started() {
+  # HACK: wait for `boser` to start and generate `bosminer.toml` file
+  for i in $(seq 1 6); do
+    if [ -e "/etc/bosminer.toml" ]; then
+      break
+    else
+      sleep 1
+    fi
+  done
+}
+
 reload_service()
 {
 	stop
