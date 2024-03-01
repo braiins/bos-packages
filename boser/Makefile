@@ -84,8 +84,10 @@ define Package/boser/install
 	$(INSTALL_BIN) ./files/boser.init $(1)/etc/init.d/boser
 	$(INSTALL_DIR) $(1)/www/boser
 	$(INSTALL_DIR) $(1)/www/boser/var
-	$(CP) $(BOSER_WWW_DIR)/* $(1)/www/boser
-	$(CP) $(BOSER_WWW_VAR_DIR)/* $(1)/www/boser/var
+	$(CP) -L $(BOSER_WWW_DIR)/* $(1)/www/boser
+	chmod -R 0755 $(1)/www/boser
+	$(CP) -L $(BOSER_WWW_VAR_DIR)/* $(1)/www/boser/var
+	chmod -R 0755 $(1)/www/boser/var
 endef
 
 $(eval $(call BuildPackage,boser))
