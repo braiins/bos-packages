@@ -62,6 +62,30 @@ factory_reset() {
 		# Erase U-Boot environment to force default one which do factory reset
 		dd if=/dev/zero of=$fip_dev seek=$env_offset bs=$env_size count=1 \
 			> /dev/null 2>&1
+
+		# Restore original bootloaders
+		local boot_backup_path uboot_path
+		local block_size=4096
+		local backup_size=$((EMMC_BOOT_BACKUP_SIZE))
+		local uboot_blk=$(( EMMC_UBOOT_BACKUP_OFFSET / block_size ))
+		local uboot_cnt=$(( EMMC_UBOOT_BACKUP_SIZE / block_size ))
+		boot_backup_path=$(mktemp)
+		uboot_path=$(mktemp)
+
+		dd if=/dev/$EMMC_BOOT_BACKUP_DEV of="$boot_backup_path" \
+			bs=$backup_size count=1 \
+			> /dev/null 2>&1
+		dd if="$boot_backup_path" skip=$uboot_blk count=$uboot_cnt \
+			bs=$block_size 2>/dev/null | gzip -d > "$uboot_path"
+
+		local uboot_size=$((EMMC_UBOOT_SIZE))
+		dd if=/dev/zero of=$fip_dev bs=$uboot_size count=1 \
+			> /dev/null 2>&1
+		dd if="$uboot_path" of=$fip_dev bs=$block_size > /dev/null 2>&1
+
+		echo 0 > /sys/class/block/$EMMC_BOOT_DEV/force_ro
+		dd if="$boot_backup_path" of=/dev/$EMMC_BOOT_DEV bs=$block_size \
+			> /dev/null 2>&1
 		;;
 	*)
 		# Do generic factory reset which only wipes rootfs overlay
