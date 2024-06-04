@@ -74,6 +74,7 @@ endef
 
 define Package/boser/conffiles
 /etc/boser.toml
+/etc/bos_display.json
 endef
 
 define Package/boser/install
