@@ -26,12 +26,11 @@
 set -e
 
 usage() {
-	echo "usage: miner [-h] {factory_reset,ip_report,fault_light} ..."
+	echo "usage: miner [-h] {factory_reset,fault_light} ..."
 	echo
 	echo "positional arguments:"
-	echo "  {factory_reset,ip_report,fault_light}"
+	echo "  {factory_reset,fault_light}"
 	echo "    factory_reset       reboot and initiate factory reset"
-	echo "    ip_report           broadcast IP and MAC address of device"
 	echo "    fault_light         turn on or off miner's fault LED"
 	echo
 	echo "optional arguments:"
@@ -40,10 +39,6 @@ usage() {
 
 factory_reset() {
 	exec bos factory_reset "$@"
-}
-
-ip_report() {
-	exec bos ip_report "$@"
 }
 
 fault_light() {
@@ -66,7 +61,7 @@ fi
 command="$1"
 
 case $command in
-	factory_reset|ip_report|fault_light)
+	factory_reset|fault_light)
 		shift
 		$command "$@"
 	;;

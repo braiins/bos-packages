@@ -26,12 +26,11 @@
 set -e
 
 usage() {
-	echo "usage: bos [-h] {factory_reset,ip_report} ..."
+	echo "usage: bos [-h] {factory_reset} ..."
 	echo
 	echo "positional arguments:"
-	echo "  {factory_reset,ip_report}"
+	echo "  {factory_reset}"
 	echo "    factory_reset       reboot and initiate factory reset"
-	echo "    ip_report           broadcast IP and MAC address of device"
 	echo
 	echo "optional arguments:"
 	echo "  -h, --help            show this help message and exit"
@@ -97,14 +96,6 @@ factory_reset() {
 	reboot
 }
 
-ip_report() {
-	if [ $# -gt 0 ]; then
-		echo "command 'ip_report' does not take any argument" >&2
-		exit 1
-	fi
-	/usr/bin/bos-tools ip-report
-}
-
 # Check number of arguments
 if [ $# -lt 1 ]; then
 	echo "missing command argument" >&2
@@ -115,7 +106,7 @@ fi
 command="$1"
 
 case $command in
-	factory_reset|ip_report)
+	factory_reset)
 		shift
 		$command "$@"
 	;;
