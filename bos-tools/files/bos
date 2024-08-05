@@ -104,11 +104,18 @@ fi
 
 # Try to find command
 command="$1"
+usedaemon="$2"
 
 case $command in
 	factory_reset)
-		shift
-		$command "$@"
+		if [ -z "$usedaemon" ]; then
+			. /lib/functions/bos-defaults.sh
+			bos-tools daemonize /bin/sh -- -c "source $0" "$0" "$command" "--nodaemon"
+		else 
+			[[ "$usedaemon" == "--nodaemon" ]] && shift
+			shift
+			$command "$@"
+		fi
 	;;
 	-h|--help)
 		usage
