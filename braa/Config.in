@@ -1,0 +1,3 @@
+config EXTERNAL_BRAA_TREE
+    string "Set path to braa tree" if DEVEL
+    default ""
