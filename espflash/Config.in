@@ -1,0 +1,3 @@
+config EXTERNAL_ESPFLASH_TREE
+    string "Set path to espflash tree" if DEVEL
+    default ""
