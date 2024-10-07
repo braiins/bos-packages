@@ -67,6 +67,7 @@ define Package/bosminer/conffiles
 /etc/bosminer-mri
 /etc/bos_license_session
 /ect/bos_custom_contract_key
+/etc/bosminer_paused
 endef
 
 define Package/bosminer/install
