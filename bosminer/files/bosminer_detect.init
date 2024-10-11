@@ -39,7 +39,7 @@ boot()
 
 	local model=""
 	case "$(bos_platform)" in
-		stm32mp157c-ii1-am2)
+		stm32mp157c-ii1-am2|stm32mp157c-ii2-bmm1)
 			echo "Detecting miner model..."
 
 			# Create or remove '/etc/bosminer_model.json' with actual
