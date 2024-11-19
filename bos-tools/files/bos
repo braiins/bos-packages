@@ -30,23 +30,29 @@ usage() {
 	echo
 	echo "positional arguments:"
 	echo "  {factory_reset}"
-	echo "    factory_reset       reboot and initiate factory reset"
-	echo
+	echo "    factory_reset [--hard]      reboot and initiate factory reset"
+	echo "                                (--hard flag causes reflash of the factory firmware, without it only the overlay is purged)"
 	echo "optional arguments:"
 	echo "  -h, --help            show this help message and exit"
 }
 
 factory_reset() {
-	if [ $# -gt 0 ]; then
-		echo "command 'factory_reset' does not take any argument" >&2
+	if [ $# -gt 1 ]; then
+		echo "command 'factory_reset' does not take more than 1 argument" >&2
 		exit 1
 	fi
 
 	. /lib/functions/bos-defaults.sh
 
-	case "$(bos_mode)" in
-	emmc)
+	local hard_reset
+	if [ "$1" = "--hard" ]; then
+		hard_reset="true"
+	fi
+
+	if [ "$(bos_mode)" = "emmc" ] && [ -n "$hard_reset" ]; then
 		local fip_dev fip_size env_size env_offset
+
+		echo "Flashing factory firmware"
 
 		fip_dev=$(find_part_fip_dev)
 		if [ -z "$fip_dev" ]; then
@@ -85,12 +91,11 @@ factory_reset() {
 		echo 0 > /sys/class/block/$EMMC_BOOT_DEV/force_ro
 		dd if="$boot_backup_path" of=/dev/$EMMC_BOOT_DEV bs=$block_size \
 			> /dev/null 2>&1
-		;;
-	*)
+	else
+		echo "Purging overlay"
 		# Do generic factory reset which only wipes rootfs overlay
 		rm "/overlay/.fs_state"
-		;;
-	esac
+	fi
 
 	sync
 	reboot
@@ -106,13 +111,17 @@ fi
 command="$1"
 usedaemon="$2"
 
+NO_DAEMON_FLAG="--nodaemon"
+
 case $command in
 	factory_reset)
-		if [ -z "$usedaemon" ]; then
+		# Consume the first argument, aka "command"
+		shift
+		if [ "$usedaemon" != "$NO_DAEMON_FLAG" ]; then
 			. /lib/functions/bos-defaults.sh
-			bos-tools daemonize /bin/sh -- -c "source $0" "$0" "$command" "--nodaemon"
-		else 
-			[[ "$usedaemon" == "--nodaemon" ]] && shift
+			bos-tools daemonize /bin/sh -- -c "source $0" "$0" "$command" "--nodaemon" "$@"
+		else
+			# Consume the second argument, aka "--nodaemon"
 			shift
 			$command "$@"
 		fi
