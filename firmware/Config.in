@@ -9,3 +9,7 @@ config FIRMWARE_VERSION
 config FIRMWARE_REQUIRE
     string "Previous firmware version required by this firmware"
     default ""
+
+config VERSION_PATH
+    string "Path to version.json file that holds SW version"
+    default ""
