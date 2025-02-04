@@ -23,9 +23,11 @@
 # contact us at opensource@braiins.com.
 
 START=99
+STOP=01
 
 USE_PROCD=1
 PROG=/usr/bin/bosminer
+PID_FILE=/var/run/bosminer.pid
 ARG1=--log-to-file
 
 start_service()
@@ -35,7 +37,7 @@ start_service()
 	procd_set_param respawn 3600 5 0
 	procd_set_param stdout 0
 	procd_set_param stderr 1
-	procd_set_param pidfile /var/run/bosminer.pid
+	procd_set_param PID_FILE $PID_FILE
 	procd_set_param term_timeout 20
 	procd_close_instance
 }
@@ -44,4 +46,13 @@ reload_service()
 {
 	stop
 	start
+}
+
+service_stopped() {
+	# Wait for bosminer to stop, blocking other services
+	# The procd will kill bosminer after "term_timeout" in case it won't exit gracefully
+	BOSMINER_PID=$(cat $PID_FILE)
+	if [ -n "${BOSMINER_PID}" ]; then
+		while [ -e /proc/${BOSMINER_PID} ]; do sleep 1s; done
+	fi
 }
