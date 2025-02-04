@@ -62,6 +62,7 @@ endef
 
 define Package/bosminer/conffiles
 /etc/bosminer.toml
+/etc/bosminer.toml.orig
 /etc/bosminer-power-meter.toml
 /etc/bosminer-autotune.json
 /etc/bosminer-mri
